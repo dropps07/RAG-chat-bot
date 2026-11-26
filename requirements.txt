@@ -1,0 +1,19 @@
+# Install with: pip install -r requirements.txt
+# torch is pinned to the CPU build (small, no GPU needed). The extra index
+# below is where the +cpu wheel lives; remove that line to get the default
+# CUDA build instead. Tested together on Python 3.12, 2026-11-26.
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+streamlit==1.67.0
+langchain==1.5.2
+langchain-community==0.4.2
+langchain-google-genai==4.5.3
+langchain-huggingface==1.3.0
+langchain-text-splitters==1.2.0
+faiss-cpu==1.16.0
+sentence-transformers==6.3.0
+torch==2.6.0+cpu
+numpy==2.5.5
+pypdf==7.2.0
+python-dotenv==1.2.4
+pytest==9.2.0
