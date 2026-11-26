@@ -43,6 +43,24 @@ def get_llm(api_key=None, model=None):
     return ChatGoogleGenerativeAI(model=model, google_api_key=api_key, temperature=0)
 
 
+def _content_to_text(content):
+    """Turn a reply's content into plain text.
+
+    Gemini usually returns one string, but it can also return the answer
+    as a list of content blocks (e.g. [{"type": "text", "text": "..."}]).
+    Join the text parts so the caller always gets a string.
+    """
+    if isinstance(content, str):
+        return content
+    parts = []
+    for part in content:
+        if isinstance(part, dict):
+            parts.append(part.get("text", ""))
+        else:
+            parts.append(str(part))
+    return "".join(parts)
+
+
 def answer_question(question, context, history=None, api_key=None, model=None):
     """Generate an answer from the retrieved context.
 
@@ -67,4 +85,4 @@ def answer_question(question, context, history=None, api_key=None, model=None):
             f"that your API key and model ({model or config.GEMINI_MODEL}) are valid. "
             f"Details: {e}"
         ) from e
-    return reply.content.strip()
+    return _content_to_text(reply.content).strip()
