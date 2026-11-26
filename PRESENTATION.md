@@ -42,7 +42,7 @@
 - **sentence-transformers, all-MiniLM-L6-v2** — local embeddings, no API key
   needed, 384-dimensional vectors.
 - **Google Gemini (free tier)** — the LLM; model name is configurable in
-  `.env` (default `gemini-3.8-flash`).
+  `.env` (default `gemini-3.5-flash-lite`).
 - **python-dotenv + pytest** — config from `.env`, tests for chunking and
   retrieval.
 
