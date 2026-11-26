@@ -117,7 +117,7 @@ Open the URL Streamlit prints (usually http://localhost:8501).
 4. In the app's settings, open **Secrets** and add:
    ```toml
    GEMINI_API_KEY = "your_key_here"
-   GEMINI_MODEL = "gemini-3.8-flash"
+   GEMINI_MODEL = "gemini-3.5-flash-lite"
    ```
 5. The first question takes a little longer: the embedding model
    (all-MiniLM-L6-v2, about 90 MB) downloads once, then it is cached.
@@ -130,7 +130,7 @@ stored on the app's own disk, so each deploy starts with an empty index.
 | Variable | Default | What it does |
 |---|---|---|
 | `GEMINI_API_KEY` | _(empty)_ | Your free Gemini API key |
-| `GEMINI_MODEL` | `gemini-3.8-flash` | Gemini model. Free-tier alternatives: `gemini-2.5-flash`, `gemini-2.5-flash-lite`, `gemini-3.5-flash` |
+| `GEMINI_MODEL` | `gemini-3.5-flash-lite` | Gemini model. (fast default) Free-tier alternatives: `gemini-2.5-flash`, `gemini-2.5-flash-lite`, `gemini-3.5-flash`, `gemini-3.8-flash` |
 | `EMBEDDING_MODEL` | `sentence-transformers/all-MiniLM-L6-v2` | Local embedding model |
 | `CHUNK_SIZE` | `1000` | Characters per chunk |
 | `CHUNK_OVERLAP` | `200` | Characters shared between neighbouring chunks |
