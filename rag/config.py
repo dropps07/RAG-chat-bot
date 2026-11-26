@@ -12,11 +12,13 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 # --- LLM (Google Gemini, free tier) ---
-# Default model: gemini-3.8-flash is the current free-tier Flash model
-# (verified in the Gemini API docs, Nov 2026). Other free-tier options:
-# gemini-2.5-flash, gemini-2.5-flash-lite, gemini-3.5-flash.
+# Default model: gemini-3.5-flash-lite — the fast free-tier model. The
+# full Flash model (gemini-3.8-flash) is slow and often overloaded
+# (same lesson as Forkcast: lite answers in seconds, flash took minutes).
+# Other free-tier options: gemini-2.5-flash, gemini-2.5-flash-lite,
+# gemini-3.5-flash, gemini-3.8-flash.
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.5-flash-lite")
 
 # --- Embeddings (local, runs on this machine, no key needed) ---
 EMBEDDING_MODEL = os.getenv(
