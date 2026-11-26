@@ -25,9 +25,28 @@ from rag.ingestion import IngestionError, ingest_files
 from rag.retrieval import format_context, format_sources, retrieve
 from rag.vectorstore import build_vectorstore, load_vectorstore, save_vectorstore
 
-st.set_page_config(page_title="RAG Chatbot", page_icon="📚")
-st.title("📚 RAG Chatbot")
-st.caption("Ask questions about your own documents. Answers come only from what you upload.")
+st.set_page_config(page_title="RAG Chatbot", page_icon="💬")
+
+# Small visual polish, Claude + ChatGPT style: warm paper background, coral
+# accent, serif headings, and no Deploy button or Streamlit footer, so the
+# app reads like a finished product, not a demo.
+st.markdown(
+    """
+    <style>
+    .stAppDeployButton {display: none;}
+    footer {visibility: hidden;}
+    h1, h2, h3 {font-family: Georgia, 'Times New Roman', serif;}
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
+st.title("RAG Chatbot")
+st.markdown(
+    "Upload a PDF or text file, then ask questions about it. "
+    "Every answer comes only from your documents, and the source is shown "
+    "under each answer."
+)
 
 # --- session state: chat history, the search index, and what was indexed ---
 if "messages" not in st.session_state:
@@ -39,19 +58,45 @@ if "vectorstore" not in st.session_state:
 if "indexed_files" not in st.session_state:
     st.session_state.indexed_files = []
 
-# --- sidebar: upload and process documents ---
+# Reuse a saved index from a previous run, if one exists.
+if st.session_state.vectorstore is None:
+    st.session_state.vectorstore = load_vectorstore()
+
+indexed = st.session_state.vectorstore is not None
+
+
+def _show_sources(sources):
+    """Render the source list under an answer."""
+    if not sources:
+        return
+    with st.expander(f"Sources ({len(sources)})"):
+        for s in sources:
+            label = f"**{s['file']}**"
+            if s.get("page"):
+                label += f", page {s['page']}"
+            st.markdown(label)
+            st.markdown(f"> {s['text'][:600]}")
+
+
+# --- sidebar: documents and chat controls ---
 with st.sidebar:
-    st.header("1. Add documents")
+    st.header("Your documents")
+    if not config.GEMINI_API_KEY:
+        st.warning(
+            "No Gemini API key found. Add GEMINI_API_KEY in Streamlit secrets "
+            "(or in your .env file) to get answers."
+        )
     uploaded = st.file_uploader(
         "Upload PDF or TXT files",
         type=["pdf", "txt"],
         accept_multiple_files=True,
+        help="Add one or more documents, then click Process documents.",
     )
-    if st.button("Process documents", type="primary"):
+    if st.button("Process documents", type="primary", use_container_width=True):
         if not uploaded:
             st.error("Upload at least one PDF or TXT file first.")
         else:
-            with st.spinner("Reading files and building the search index..."):
+            with st.spinner("Reading your files and building the search index..."):
                 try:
                     with tempfile.TemporaryDirectory() as tmp:
                         paths = []
@@ -64,8 +109,10 @@ with st.sidebar:
                     save_vectorstore(vectorstore)
                     st.session_state.vectorstore = vectorstore
                     st.session_state.indexed_files = [f.name for f in uploaded]
+                    indexed = True
                     st.success(
-                        f"Indexed {len(chunks)} chunks from {len(uploaded)} file(s)."
+                        f"Ready — indexed {len(chunks)} chunks from "
+                        f"{len(uploaded)} file(s). Ask a question below."
                     )
                     for name, reason in skipped:
                         st.warning(f"Skipped {name}: {reason}")
@@ -75,56 +122,58 @@ with st.sidebar:
                     st.error(f"Could not build the index. Details: {e}")
 
     if st.session_state.indexed_files:
-        st.write("Indexed files:")
+        st.subheader("Indexed")
         for name in st.session_state.indexed_files:
-            st.write(f"- {name}")
+            st.write(f"✓ {name}")
 
-    st.header("2. Chat")
-    if st.button("Clear chat"):
+    st.divider()
+    st.header("Chat")
+    if st.button("Clear chat", use_container_width=True):
         st.session_state.messages = []
         st.session_state.history = []
         st.rerun()
 
-# Warn early if there is no API key, so the user is not surprised later.
-if not config.GEMINI_API_KEY:
-    st.sidebar.warning(
-        "No Gemini API key found. Add GEMINI_API_KEY to your .env file "
-        "(copy .env.example first) or to Streamlit secrets."
-    )
+    with st.expander("How it works"):
+        st.markdown(
+            "1. **Upload** a PDF or TXT file above.\n"
+            "2. Click **Process documents** to index it.\n"
+            "3. **Ask** anything about it below.\n\n"
+            "The app searches your documents and asks Gemini to answer "
+            "only from what it finds. If the answer is not in your "
+            "documents, it says so instead of guessing."
+        )
 
-# Reuse a saved index from a previous run, if one exists.
-if st.session_state.vectorstore is None:
-    st.session_state.vectorstore = load_vectorstore()
+# --- welcome message: shown until the first question is asked ---
+if not st.session_state.messages:
+    if not indexed:
+        st.info(
+            "Start by uploading a document in the sidebar, then click "
+            "**Process documents**. Once it is indexed, ask your first "
+            "question below."
+        )
+    else:
+        st.info(
+            "Your documents are indexed. Ask anything about them below — "
+            "for example, “What is this document about?” or "
+            "“Summarise the key points.”"
+        )
 
 # --- show the chat history ---
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
         if msg.get("sources"):
-            with st.expander("Sources"):
-                for s in msg["sources"]:
-                    label = f"**{s['file']}**"
-                    if s.get("page"):
-                        label += f", page {s['page']}"
-                    st.markdown(label)
-                    st.markdown(f"> {s['text'][:600]}")
-
-
-def _show_sources(sources):
-    """Render the source list under an answer."""
-    if not sources:
-        return
-    with st.expander("Sources"):
-        for s in sources:
-            label = f"**{s['file']}**"
-            if s.get("page"):
-                label += f", page {s['page']}"
-            st.markdown(label)
-            st.markdown(f"> {s['text'][:600]}")
-
+            _show_sources(msg["sources"])
 
 # --- ask a question ---
-if question := st.chat_input("Ask a question about your documents"):
+# The input stays disabled until a document is indexed, so the flow is
+# obvious: upload first, then ask.
+placeholder = (
+    "Ask a question about your documents"
+    if indexed
+    else "Upload and process a document first"
+)
+if question := st.chat_input(placeholder, disabled=not indexed):
     st.session_state.messages.append({"role": "user", "content": question})
     with st.chat_message("user"):
         st.markdown(question)
@@ -135,8 +184,8 @@ if question := st.chat_input("Ask a question about your documents"):
             sources = []
         elif not config.GEMINI_API_KEY:
             answer = (
-                "No Gemini API key found. Add GEMINI_API_KEY to your .env file "
-                "(copy .env.example first) or to Streamlit secrets, then restart the app."
+                "No Gemini API key found. Add GEMINI_API_KEY in Streamlit secrets "
+                "(or in your .env file), then restart the app."
             )
             sources = []
         else:
